@@ -29,26 +29,29 @@ export default function App() {
   useEffect(() => {
     fetch("/nouns_5_letters.json")
       .then((res) => res.json())
-      .then((data) => setWordsDict(data));
-  });
-  // FIXME ASAP
-  useEffect(() => {
-    if (!secretWord) {
-      const randomIdx = Math.floor(Math.random() * wordsDict.length);
-      const newWord = wordsDict[randomIdx];
-      setSecretWord(newWord);
-      console.log("Chosen word:", newWord);
-    } else {
-      console.log("Loaded saved word:", secretWord);
-    }
-  }, [secretWord, setSecretWord, wordsDict]);
+      .then((data) => {
+        setWordsDict(data);
+        if (!secretWord) {
+          const randomIdx = Math.floor(Math.random() * data.length);
+          const newWord = data[randomIdx];
+          setSecretWord(newWord);
+          console.log("Chosen word:", newWord);
+        } else {
+          console.log("Loaded saved word:", secretWord);
+        }
+      });
+  }, [secretWord, setSecretWord]);
 
   useEffect(() => {
-    console.log("words updated:", wordsDict);
+    if (wordsDict.length !== 0) {
+      console.log("words dict got updated:", wordsDict);
+    }
   }, [wordsDict]);
 
   useEffect(() => {
-    console.log("secretWord effect triggered:", secretWord);
+    if (secretWord) {
+      console.log("secret word got updated:", secretWord);
+    }
   }, [secretWord]);
 
   function handleReset() {
