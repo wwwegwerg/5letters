@@ -20,27 +20,36 @@ export default function App() {
     "letters_statuses",
     [],
   );
-  const [wordsDict, setWords] = useState<string[]>([]);
+  const [wordsDict, setWordsDict] = useState<string[]>([]);
   const [inputValue, setInputValue] = useState("");
-  const [gameStatus, setGameStatus] = useState(
+  const [status, setStatus] = useState(
     `${maxMoves - history.length} moves left`,
   );
 
   useEffect(() => {
     fetch("/nouns_5_letters.json")
       .then((res) => res.json())
-      .then((data) => {
-        setWords(data);
-        if (!secretWord) {
-          const randomIdx = Math.floor(Math.random() * data.length);
-          const newWord = data[randomIdx];
-          setSecretWord(newWord);
-          console.log("Chosen word:", newWord);
-        } else {
-          console.log("Loaded saved word:", secretWord);
-        }
-      });
-  }, [gameState, secretWord, setSecretWord]);
+      .then((data) => setWordsDict(data));
+  });
+  // FIXME ASAP
+  useEffect(() => {
+    if (!secretWord) {
+      const randomIdx = Math.floor(Math.random() * wordsDict.length);
+      const newWord = wordsDict[randomIdx];
+      setSecretWord(newWord);
+      console.log("Chosen word:", newWord);
+    } else {
+      console.log("Loaded saved word:", secretWord);
+    }
+  }, [secretWord, setSecretWord, wordsDict]);
+
+  useEffect(() => {
+    console.log("words updated:", wordsDict);
+  }, [wordsDict]);
+
+  useEffect(() => {
+    console.log("secretWord effect triggered:", secretWord);
+  }, [secretWord]);
 
   function handleReset() {
     setGameState("new");
@@ -52,13 +61,13 @@ export default function App() {
   function handlePush() {
     const guess = normalizeString(inputValue).toUpperCase();
 
-    if (guess.length !== lettersInWord || !/^[А-ЯЁ]+$/.test(guess)) {
-      setGameStatus("\nInvalid input");
+    if (guess.length !== lettersInWord || !/^[А-Я]+$/.test(guess)) {
+      setStatus("\nInvalid input");
       return;
     }
 
     if (!wordsDict.includes(guess)) {
-      setGameStatus(`${guess} is not a word`);
+      setStatus(`${guess} is not a word`);
       return;
     }
 
@@ -69,18 +78,18 @@ export default function App() {
 
     if (guess === secretWord) {
       setGameState("win");
-      setGameStatus("You won!");
+      setStatus("You won!");
       return;
     }
 
     if (nextHistoryLen === maxMoves) {
       setGameState("lose");
-      setGameStatus(`You lost! The word is: ${secretWord}`);
+      setStatus(`You lost! The word is: ${secretWord}`);
       return;
     }
 
-    if (gameState !== "lose" && gameState !== "win") {
-      setGameStatus(`${maxMoves - history.length - 1} moves left`);
+    if (gameState === "new" || gameState === "started") {
+      setStatus(`${maxMoves - history.length - 1} moves left`);
       setInputValue("");
     }
   }
@@ -139,7 +148,7 @@ export default function App() {
           <span>keyboard?</span>
         </div>
         <div>
-          <h1 className="text-2xl">{gameStatus}</h1>
+          <h1 className="text-2xl">{status}</h1>
         </div>
       </div>
     </>
