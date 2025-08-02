@@ -2,20 +2,23 @@ import { useEffect, useState } from "react";
 import type { LetterStatus, Game, GameState } from "./types";
 import { getLetterStatuses } from "./utils/getLetterStatuses";
 import { normalizeString } from "./utils/normalizeString";
-// import { useLocalStorage } from "./utils/useLocalStorage";
 import { Square } from "./components/Square";
 import { Button } from "./components/Button";
+import { useLocalStorage } from "./utils/useLocalStorage";
 
 export default function App() {
   const [words, setWords] = useState<string[]>([]);
-  const [secretWord, setSecretWord] = useState("");
-  // const [storedSecretWord, setStoredSecretWord] = useLocalStorage(
-  //   "secret_word",
-  //   "",
-  // );
-  // const [storedHistory, setStoreHistory] = useLocalStorage("history", []);
+  const [gameState, setGameState] = useLocalStorage<GameState>(
+    "game_state",
+    "new",
+  );
+  const [secretWord, setSecretWord] = useLocalStorage("secret_word", "");
+  const [history, setHistory] = useLocalStorage<string[]>("history", []);
 
-  // function handleReset() {}
+  function handleReset() {
+    setGameState("new");
+    setHistory([]);
+  }
 
   useEffect(() => {
     fetch("/nouns_5_letters.json")
@@ -23,11 +26,13 @@ export default function App() {
       .then((data) => {
         setWords(data);
         const randomIdx = Math.floor(Math.random() * data.length);
-        setSecretWord(data[randomIdx]);
+        if (gameState !== "started") {
+          setSecretWord(data[randomIdx]);
+        }
         // TODO: remove
         console.log(data[randomIdx]);
       });
-  }, []);
+  }, [gameState, setSecretWord]);
 
   if (!secretWord) return <div>Загрузка...</div>;
 
@@ -37,13 +42,23 @@ export default function App() {
       secretWord={secretWord}
       wordsDict={words}
       maxMoves={6}
+      history={history}
+      setHistory={setHistory}
+      handleReset={handleReset}
     />
   );
 }
 
-function Game({ secretWord, maxMoves, lettersInWord, wordsDict }: Game) {
+function Game({
+  secretWord,
+  maxMoves,
+  lettersInWord,
+  wordsDict,
+  history,
+  setHistory,
+  handleReset,
+}: Game) {
   const [inputValue, setInputValue] = useState("");
-  const [history, setHistory] = useState<string[]>([]);
   const [gameStatus, setGameStatus] = useState(
     `${maxMoves - history.length} moves left`,
   );
@@ -52,7 +67,10 @@ function Game({ secretWord, maxMoves, lettersInWord, wordsDict }: Game) {
 
   function handlePush() {
     const guess = normalizeString(inputValue).toUpperCase();
-    if (guess.length !== 5 || !/^[А-ЯЁ]+$/.test(guess)) {
+    // TODO: remove
+    console.log(secretWord);
+    console.log("input: " + guess);
+    if (guess.length !== lettersInWord || !/^[А-ЯЁ]+$/.test(guess)) {
       setGameStatus("\nInvalid input");
       return;
     }
@@ -129,10 +147,7 @@ function Game({ secretWord, maxMoves, lettersInWord, wordsDict }: Game) {
             />
             <Button onClick={handlePush} disabled={isGameOver} value="=>" />
           </div>
-          <Button
-            onClick={() => console.warn("not implemented")}
-            value="reset"
-          />
+          <Button onClick={handleReset} value="reset" />
           <span>keyboard?</span>
         </div>
         <div>

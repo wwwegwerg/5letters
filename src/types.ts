@@ -5,6 +5,9 @@ export interface Game {
   maxMoves: number;
   lettersInWord: number;
   wordsDict: string[];
+  history: string[];
+  setHistory: React.Dispatch<React.SetStateAction<string[]>>;
+  handleReset: () => void;
 }
 
-export type GameState = "started" | "new" | "ended";
+export type GameState = "new" | "started" | "ended";
