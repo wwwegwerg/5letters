@@ -1,75 +1,57 @@
 import { useEffect, useState } from "react";
-import type { LetterStatus, Game, GameState } from "./types";
+import type { LetterStatus, GameState } from "./types";
 import { getLetterStatuses } from "./utils/getLetterStatuses";
 import { normalizeString } from "./utils/normalizeString";
 import { Square } from "./components/Square";
 import { Button } from "./components/Button";
-import { useLocalStorage } from "./utils/useLocalStorage";
+import { useLocalStorage } from "./hooks/useLocalStorage";
 
 export default function App() {
-  const [words, setWords] = useState<string[]>([]);
+  const maxMoves = 6;
+  const lettersInWord = 5;
+
   const [gameState, setGameState] = useLocalStorage<GameState>(
     "game_state",
     "new",
   );
   const [secretWord, setSecretWord] = useLocalStorage("secret_word", "");
   const [history, setHistory] = useLocalStorage<string[]>("history", []);
-
-  function handleReset() {
-    setGameState("new");
-    setHistory([]);
-  }
+  const [lettersStatus, setLettersStatus] = useLocalStorage<LetterStatus[][]>(
+    "letters_statuses",
+    [],
+  );
+  const [wordsDict, setWords] = useState<string[]>([]);
+  const [inputValue, setInputValue] = useState("");
+  const [gameStatus, setGameStatus] = useState(
+    `${maxMoves - history.length} moves left`,
+  );
 
   useEffect(() => {
     fetch("/nouns_5_letters.json")
       .then((res) => res.json())
       .then((data) => {
         setWords(data);
-        const randomIdx = Math.floor(Math.random() * data.length);
-        if (gameState !== "started") {
-          setSecretWord(data[randomIdx]);
+        if (!secretWord) {
+          const randomIdx = Math.floor(Math.random() * data.length);
+          const newWord = data[randomIdx];
+          setSecretWord(newWord);
+          console.log("Chosen word:", newWord);
+        } else {
+          console.log("Loaded saved word:", secretWord);
         }
-        // TODO: remove
-        console.log(data[randomIdx]);
       });
-  }, [gameState, setSecretWord]);
+  }, [gameState, secretWord, setSecretWord]);
 
-  if (!secretWord) return <div>Загрузка...</div>;
-
-  return (
-    <Game
-      lettersInWord={5}
-      secretWord={secretWord}
-      wordsDict={words}
-      maxMoves={6}
-      history={history}
-      setHistory={setHistory}
-      handleReset={handleReset}
-    />
-  );
-}
-
-function Game({
-  secretWord,
-  maxMoves,
-  lettersInWord,
-  wordsDict,
-  history,
-  setHistory,
-  handleReset,
-}: Game) {
-  const [inputValue, setInputValue] = useState("");
-  const [gameStatus, setGameStatus] = useState(
-    `${maxMoves - history.length} moves left`,
-  );
-  const [lettersStatus, setLettersStatus] = useState<LetterStatus[][]>([]);
-  const [isGameOver, setIsGameOver] = useState(false);
+  function handleReset() {
+    setGameState("new");
+    setHistory([]);
+    setInputValue("");
+    setLettersStatus([]);
+  }
 
   function handlePush() {
     const guess = normalizeString(inputValue).toUpperCase();
-    // TODO: remove
-    console.log(secretWord);
-    console.log("input: " + guess);
+
     if (guess.length !== lettersInWord || !/^[А-ЯЁ]+$/.test(guess)) {
       setGameStatus("\nInvalid input");
       return;
@@ -86,22 +68,24 @@ function Game({
     setLettersStatus((prev) => [...prev, newStatuses]);
 
     if (guess === secretWord) {
-      setIsGameOver(true);
+      setGameState("win");
       setGameStatus("You won!");
       return;
     }
 
     if (nextHistoryLen === maxMoves) {
-      setIsGameOver(true);
+      setGameState("lose");
       setGameStatus(`You lost! The word is: ${secretWord}`);
       return;
     }
 
-    if (!isGameOver) {
+    if (gameState !== "lose" && gameState !== "win") {
       setGameStatus(`${maxMoves - history.length - 1} moves left`);
       setInputValue("");
     }
   }
+
+  if (!secretWord) return <div>Загрузка...</div>;
 
   return (
     <>
@@ -142,10 +126,14 @@ function Game({
                   handlePush();
                 }
               }}
-              disabled={isGameOver}
+              disabled={gameState === "win" || gameState === "lose"}
               className="rounded-sm border-2 border-[#1C1C1E] text-center"
             />
-            <Button onClick={handlePush} disabled={isGameOver} value="=>" />
+            <Button
+              onClick={handlePush}
+              disabled={gameState === "win" || gameState === "lose"}
+              value="=>"
+            />
           </div>
           <Button onClick={handleReset} value="reset" />
           <span>keyboard?</span>
