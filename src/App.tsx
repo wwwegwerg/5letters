@@ -20,11 +20,12 @@ export default function App() {
     "letters_statuses",
     [],
   );
-  const [wordsDict, setWordsDict] = useState<string[]>([]);
-  const [inputValue, setInputValue] = useState("");
-  const [status, setStatus] = useState(
+  const [status, setStatus] = useLocalStorage(
+    "status",
     `${maxMoves - history.length} moves left`,
   );
+  const [wordsDict, setWordsDict] = useState<string[]>([]);
+  const [inputValue, setInputValue] = useState("");
 
   useEffect(() => {
     fetch("/nouns_5_letters.json")
@@ -56,9 +57,11 @@ export default function App() {
 
   function handleReset() {
     setGameState("new");
+    setSecretWord("");
     setHistory([]);
     setInputValue("");
     setLettersStatus([]);
+    setStatus(`${maxMoves - history.length} moves left`);
   }
 
   function handlePush() {
@@ -80,18 +83,18 @@ export default function App() {
     setLettersStatus((prev) => [...prev, newStatuses]);
 
     if (guess === secretWord) {
-      setGameState("win");
+      setGameState("ended");
       setStatus("You won!");
       return;
     }
 
     if (nextHistoryLen === maxMoves) {
-      setGameState("lose");
+      setGameState("ended");
       setStatus(`You lost! The word is: ${secretWord}`);
       return;
     }
 
-    if (gameState === "new" || gameState === "started") {
+    if (gameState !== "ended") {
       setStatus(`${maxMoves - history.length - 1} moves left`);
       setInputValue("");
     }
@@ -138,12 +141,12 @@ export default function App() {
                   handlePush();
                 }
               }}
-              disabled={gameState === "win" || gameState === "lose"}
+              disabled={gameState === "ended"}
               className="rounded-sm border-2 border-[#1C1C1E] text-center"
             />
             <Button
               onClick={handlePush}
-              disabled={gameState === "win" || gameState === "lose"}
+              disabled={gameState === "ended"}
               value="=>"
             />
           </div>
