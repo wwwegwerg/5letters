@@ -9,6 +9,7 @@ export default {
   semi: true,
   trailingComma: "all",
   tabWidth: 2,
+  // tailwindFunctions: ["clsx"],
   plugins: [
     // "@ianvs/prettier-plugin-sort-imports",
     "prettier-plugin-tailwindcss",
