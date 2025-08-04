@@ -80,6 +80,7 @@ export default function App() {
     setIsGameOver,
     setLettersStatus,
     setSecretWord,
+    setStatus,
   ]);
 
   useEffect(() => {
