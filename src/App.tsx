@@ -131,8 +131,8 @@ export default function App() {
                     return (
                       <Square
                         key={idx}
-                        value={word?.[col]}
                         status={wordStatus?.[col]}
+                        value={word?.[col]}
                       />
                     );
                   })}
@@ -142,11 +142,13 @@ export default function App() {
           </div>
           <div className="flex flex-row gap-2">
             <input
+              className="rounded-sm border-2 border-[#1C1C1E] text-center"
               id="word-input"
               type="text"
               autoFocus
               maxLength={lettersInWord}
               placeholder={`Введите слово`}
+              disabled={isGameOver}
               value={inputValue}
               onChange={(e) => setInputValue(e.target.value)}
               onKeyDown={(e) => {
@@ -154,12 +156,10 @@ export default function App() {
                   handlePush();
                 }
               }}
-              disabled={isGameOver}
-              className="rounded-sm border-2 border-[#1C1C1E] text-center"
             />
-            <Button onClick={handlePush} disabled={isGameOver} value="=>" />
+            <Button disabled={isGameOver} value="=>" onClick={handlePush} />
           </div>
-          <Button onClick={handleReset} value="reset" />
+          <Button value="reset" onClick={handleReset} />
           <span>keyboard?</span>
         </div>
         <div>
