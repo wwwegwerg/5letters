@@ -1,5 +1,5 @@
-import { useEffect, useState } from "react";
-import type { LetterStatus, GameState } from "./types";
+import { useCallback, useEffect, useState } from "react";
+import type { LetterStatus } from "./types";
 import { getLetterStatuses } from "./utils/getLetterStatuses";
 import { normalizeString } from "./utils/normalizeString";
 import { Square } from "./components/Square";
@@ -10,10 +10,7 @@ export default function App() {
   const maxMoves = 6;
   const lettersInWord = 5;
 
-  const [gameState, setGameState] = useLocalStorage<GameState>(
-    "game_state",
-    "new",
-  );
+  const [isGameOver, setIsGameOver] = useLocalStorage("is_game_over", false);
   const [secretWord, setSecretWord] = useLocalStorage("secret_word", "");
   const [history, setHistory] = useLocalStorage<string[]>("history", []);
   const [lettersStatus, setLettersStatus] = useLocalStorage<LetterStatus[][]>(
@@ -27,21 +24,81 @@ export default function App() {
   const [wordsDict, setWordsDict] = useState<string[]>([]);
   const [inputValue, setInputValue] = useState("");
 
+  const isValidGuess: (arg0: string) => boolean = (guess: string) => {
+    if (guess.length !== lettersInWord || !/^[А-Я]+$/.test(guess)) {
+      setStatus("\nInvalid input");
+      return false;
+    }
+    if (!wordsDict.includes(guess)) {
+      setStatus(`${guess} is not a word`);
+      return false;
+    }
+    return true;
+  };
+
+  const handlePush: () => void = () => {
+    const guess = normalizeString(inputValue).toUpperCase();
+
+    if (!isValidGuess(guess)) {
+      return;
+    }
+
+    const newStatuses = getLetterStatuses(guess, secretWord);
+    const nextHistoryLen = history.length + 1;
+    setHistory((prev) => [...prev, guess]);
+    setLettersStatus((prev) => [...prev, newStatuses]);
+
+    if (guess === secretWord) {
+      setIsGameOver(true);
+      setStatus("You won!");
+      return;
+    }
+
+    if (nextHistoryLen === maxMoves) {
+      setIsGameOver(true);
+      setStatus(`You lost! The word is: ${secretWord}`);
+      return;
+    }
+
+    if (!isGameOver) {
+      setStatus(`${maxMoves - history.length - 1} moves left`);
+      setInputValue("");
+    }
+  };
+
+  const handleReset = useCallback(() => {
+    setIsGameOver(false);
+    setSecretWord("");
+    setHistory([]);
+    setInputValue("");
+    setLettersStatus([]);
+    setWordsDict([]);
+    setStatus(`${maxMoves - history.length} moves left`);
+  }, [
+    history.length,
+    setHistory,
+    setIsGameOver,
+    setLettersStatus,
+    setSecretWord,
+  ]);
+
   useEffect(() => {
-    fetch("/nouns_5_letters.json")
-      .then((res) => res.json())
-      .then((data) => {
-        setWordsDict(data);
-        if (!secretWord) {
-          const randomIdx = Math.floor(Math.random() * data.length);
-          const newWord = data[randomIdx];
-          setSecretWord(newWord);
-          console.log("Chosen word:", newWord);
-        } else {
-          console.log("Loaded saved word:", secretWord);
-        }
-      });
-  }, [secretWord, setSecretWord]);
+    if (wordsDict.length === 0) {
+      fetch("/nouns_5_letters.json")
+        .then((res) => res.json())
+        .then((data) => {
+          setWordsDict(data);
+          if (!secretWord) {
+            const randomIdx = Math.floor(Math.random() * data.length);
+            const newWord = data[randomIdx];
+            setSecretWord(newWord);
+            console.log("Chosen word:", newWord);
+          } else {
+            console.log("Loaded saved word:", secretWord);
+          }
+        });
+    }
+  }, [secretWord, setSecretWord, wordsDict.length]);
 
   useEffect(() => {
     if (wordsDict.length !== 0) {
@@ -54,51 +111,6 @@ export default function App() {
       console.log("secret word got updated:", secretWord);
     }
   }, [secretWord]);
-
-  function handleReset() {
-    setGameState("new");
-    setSecretWord("");
-    setHistory([]);
-    setInputValue("");
-    setLettersStatus([]);
-    setStatus(`${maxMoves - history.length} moves left`);
-  }
-
-  function handlePush() {
-    const guess = normalizeString(inputValue).toUpperCase();
-
-    if (guess.length !== lettersInWord || !/^[А-Я]+$/.test(guess)) {
-      setStatus("\nInvalid input");
-      return;
-    }
-
-    if (!wordsDict.includes(guess)) {
-      setStatus(`${guess} is not a word`);
-      return;
-    }
-
-    const newStatuses = getLetterStatuses(guess, secretWord);
-    const nextHistoryLen = history.length + 1;
-    setHistory((prev) => [...prev, guess]);
-    setLettersStatus((prev) => [...prev, newStatuses]);
-
-    if (guess === secretWord) {
-      setGameState("ended");
-      setStatus("You won!");
-      return;
-    }
-
-    if (nextHistoryLen === maxMoves) {
-      setGameState("ended");
-      setStatus(`You lost! The word is: ${secretWord}`);
-      return;
-    }
-
-    if (gameState !== "ended") {
-      setStatus(`${maxMoves - history.length - 1} moves left`);
-      setInputValue("");
-    }
-  }
 
   if (!secretWord) return <div>Загрузка...</div>;
 
@@ -141,14 +153,10 @@ export default function App() {
                   handlePush();
                 }
               }}
-              disabled={gameState === "ended"}
+              disabled={isGameOver}
               className="rounded-sm border-2 border-[#1C1C1E] text-center"
             />
-            <Button
-              onClick={handlePush}
-              disabled={gameState === "ended"}
-              value="=>"
-            />
+            <Button onClick={handlePush} disabled={isGameOver} value="=>" />
           </div>
           <Button onClick={handleReset} value="reset" />
           <span>keyboard?</span>
