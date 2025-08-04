@@ -8,10 +8,10 @@ export function Button({
 }: React.ButtonHTMLAttributes<HTMLButtonElement>) {
   return (
     <button
-      onClick={onClick}
-      disabled={disabled}
       className="rounded-sm border-2 border-[#1C1C1E] px-3 font-bold"
+      disabled={disabled}
       type={type}
+      onClick={onClick}
     >
       {value}
     </button>
